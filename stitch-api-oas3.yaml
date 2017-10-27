@@ -1,0 +1,716 @@
+openapi: 3.0.0
+servers:
+  - url: 'https://www.string-db.org/api'
+    x-maturity: production
+info:
+  title: STITCH API
+  version: 5.0.0
+  x-docVersion: 0.1
+  termsOfService: 'http://string-db.org/cgi/access.pl'
+  description: >
+    STITCH is a database of known and predicted interactions between chemicals
+    and proteins. The interactions include direct (physical) and indirect
+    (functional) associations; they stem from computational prediction, from
+    knowledge transfer between organisms, and from interactions aggregated from
+    other (primary) databases.   
+  contact:
+    name: STITCH
+    url: 'http://stitch.embl.de'
+  x-otherContacts:
+    - name: Michel Dumontier
+      email: michel.dumontier@gmail.com
+      x-role: document creator
+      x-id: 'https://orcid.org/0000-0003-4727-9435'
+  x-externalResources:
+    - x-url: 'http://www.ncbi.nlm.nih.gov/pubmed/26590256'
+      x-type: publication
+      x-description: null
+externalDocs:
+  description: API documentation
+  url: 'http://string-db.org/cgi/help.pl?subpage=api'
+tags:
+  - name: core
+    description: Core function calls
+paths:
+  '/{responseFormat}/resolve':
+    get:
+      operationId: resolve
+      description: |
+        List of items that match (in name or identifier) the query item.
+      tags:
+        - core
+      parameters:
+        - name: identifier
+          in: query
+          description: Entity identifier (e.g. ADD)
+          required: true
+          schema:
+            type: string
+          x-valueType:
+            - 'http://identifiers.org/uniprot'
+            - 'http://identifiers.org/gene.symbol'
+            - 'http://identifiers.org/ncbigene'
+        - name: species
+          in: query
+          description: The species identifier to limit the result to (e.g. 9606)
+          schema:
+            type: integer
+          x-valueType:
+            - 'http://identifiers.org/taxonomy'
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            enum:
+              - json
+              - tsv
+              - tsv-no-header
+      responses:
+        '200':
+          description: |
+            Successful response with concept details returned
+          content:
+            application/json:
+              x-responseValueType:
+                - x-path: stringId
+                  x-valueType: 'http://identifiers.org/string'
+                - x-path: ncbiTaxonId
+                  x-valueType: 'http://identifiers.org/taxonomy'
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResolveObj'
+              examples:
+                response:
+                  value:
+                    - stringId: 9606.ENSP00000333813
+                      preferredName: ALG12
+                      ncbiTaxonId: 9606
+                      taxonName: Homo sapiens
+                      annotation: >-
+                        asparagine-linked glycosylation 12,
+                        alpha-1,6-mannosyltransferase homolog (cerevisiae); Adds
+                        the eighth mannose residue in an alpha-1,6 linkage onto
+                        the dolichol-PP-oligosaccharide precursor (dolichol-PP-
+                        Man(7)GlcNAc(2)) required for protein glycosylation"
+                      queryIndex: -1
+            text/tab-separated-values:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResolveObj'
+  '/{responseFormat}/resolveList':
+    get:
+      operationId: resolveList
+      description: |
+        List of items that match (in name or identifier) the query items
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired response format
+          required: true
+          schema:
+            type: string
+            enum:
+              - json
+              - tsv
+              - tsv-no-header
+            default: json
+        - name: identifiers
+          in: query
+          description: >-
+            specify multiple items delimited with %0D, e.g.
+            DRD1_HUMAN%0DDRD2_HUMAN
+          required: true
+          schema:
+            type: string
+        - name: species
+          in: query
+          description: The species identifier to limit the result to (e.g. 9606)
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: 'Maximum number of nodes to return, e.g 10'
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: |
+            Successful response with concept details returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResolveObj'
+              examples:
+                response:
+                  value:
+                    - stringId: 9606.ENSP00000333813
+                      preferredName: ALG12
+                      ncbiTaxonId: 9606
+                      taxonName: Homo sapiens
+                      annotation: >-
+                        asparagine-linked glycosylation 12,
+                        alpha-1,6-mannosyltransferase homolog (cerevisiae); Adds
+                        the eighth mannose residue in an alpha-1,6 linkage onto
+                        the dolichol-PP-oligosaccharide precursor (dolichol-PP-
+                        Man(7)GlcNAc(2)) required for protein glycosylation"
+                      queryIndex: -1
+            text/tab-separated-values:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResolveObj'
+  '/{responseFormat}/interactors':
+    get:
+      operationId: interactors
+      description: |
+        List of interaction partners for the query item
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            enum:
+              - tsv
+              - tsv-no-header
+            default: tsv
+        - name: identifier
+          in: query
+          description: The entity identifier (e.g. 4932.YML115C )
+          required: true
+          schema:
+            type: string
+        - name: required_score
+          in: query
+          description: >-
+            Threshold of significance to include a interaction, a number between
+            0 and 1000
+          schema:
+            type: integer
+        - name: additional_network_nodes
+          in: query
+          description: 'Number of additional nodes in network (ordered by score), e.g. 10'
+          schema:
+            type: integer
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            text/tab-separated-values:
+              schema:
+                type: string
+  '/{responseFormat}/interactorsList':
+    get:
+      operationId: interactorsList
+      description: |
+        List of interaction partners for the query item
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            enum:
+              - tsv
+              - tsv-no-header
+            default: tsv
+        - name: identifiers
+          in: query
+          description: A list of identifiers (e.g. 4932.YML115C%0D4932.YJR075W )
+          required: true
+          schema:
+            type: string
+        - name: required_score
+          in: query
+          description: >-
+            Threshold of significance to include a interaction, a number between
+            0 and 1000
+          schema:
+            type: integer
+        - name: additional_network_nodes
+          in: query
+          description: 'Number of additional nodes in network (ordered by score), e.g. 10'
+          schema:
+            type: integer
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            text/tab-separated-values:
+              schema:
+                type: string
+  '/{responseFormat}/actions':
+    get:
+      operationId: actions
+      description: |
+        Action partners for the query item
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            enum:
+              - tsv
+              - tsv-no-header
+            default: tsv
+        - name: identifier
+          in: query
+          description: Entity identifier (e.g.  4932.YML115C)
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: 'Maximum number of nodes to return, e.g 10'
+          schema:
+            type: integer
+        - name: required_score
+          in: query
+          description: >-
+            Threshold of significance to include a interaction, a number between
+            0 and 1000
+          schema:
+            type: integer
+        - name: additional_network_nodes
+          in: query
+          description: 'Number of additional nodes in network (ordered by score), e.g. 10'
+          schema:
+            type: integer
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            text/tab-separated-values:
+              schema:
+                type: string
+  '/{responseFormat}/actionsList':
+    get:
+      operationId: actionsList
+      description: |
+        Action partners for the query item
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            enum:
+              - tsv
+              - tsv-no-header
+            default: tsv
+        - name: identifiers
+          in: query
+          description: A list of identifiers (e.g. 4932.YML115C%0D4932.YJR075W )
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: 'Maximum number of nodes to return, e.g 10'
+          schema:
+            type: integer
+        - name: required_score
+          in: query
+          description: >-
+            Threshold of significance to include a interaction, a number between
+            0 and 1000
+          schema:
+            type: integer
+        - name: additional_network_nodes
+          in: query
+          description: 'Number of additional nodes in network (ordered by score), e.g. 10'
+          schema:
+            type: integer
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            text/tab-separated-values:
+              schema:
+                type: string
+  '/{responseFormat}/interactions':
+    get:
+      operationId: interactions
+      description: >
+        Interaction network in PSI-MI 2.5 format or PSI-MI-TAB format (similar
+        to tsv)
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            enum:
+              - psi-mi
+              - psi-mi-tab
+            default: psi-mi
+        - name: identifier
+          in: query
+          description: The entity identifier (e.g. 4932.YML115C )
+          required: true
+          schema:
+            type: string
+        - name: required_score
+          in: query
+          description: >-
+            Threshold of significance to include a interaction, a number between
+            0 and 1000
+          schema:
+            type: integer
+        - name: additional_network_nodes
+          in: query
+          description: 'Number of additional nodes in network (ordered by score), e.g. 10'
+          schema:
+            type: integer
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            application/psi-mi:
+              schema:
+                type: string
+  '/{responseFormat}/interactionsList':
+    get:
+      operationId: interactionsList
+      description: >
+        Interaction network in PSI-MI 2.5 format or PSI-MI-TAB format (similar
+        to tsv)
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            enum:
+              - psi-mi
+              - psi-mi-tab
+            default: psi-mi
+        - name: identifiers
+          in: query
+          description: >-
+            A list of identifiers (e.g.
+            4932.YML115C%0D4932.YJR075W%0D4932.YEL036C )
+          required: true
+          schema:
+            type: string
+        - name: required_score
+          in: query
+          description: >-
+            Threshold of significance to include a interaction, a number between
+            0 and 1000
+          schema:
+            type: integer
+        - name: additional_network_nodes
+          in: query
+          description: 'Number of additional nodes in network (ordered by score), e.g. 10'
+          schema:
+            type: integer
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            application/psi-mi:
+              schema:
+                type: string
+  '/{responseFormat}/abstracts':
+    get:
+      operationId: abstracts
+      description: |
+        List of abstracts that contain the query item
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            enum:
+              - json
+              - psi-mi
+              - psi-mi-tab
+            default: json
+        - name: identifier
+          in: query
+          description: The entity identifier (e.g. 4932.YML115C )
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: 'Maximum number of results to return, e.g 10'
+          schema:
+            type: integer
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            application/json:
+              schema:
+                type: string
+  '/{responseFormat}/abstractsList':
+    get:
+      operationId: abstractsList
+      description: |
+        List of abstracts that contain the query item
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            enum:
+              - json
+              - psi-mi
+              - psi-mi-tab
+            default: json
+        - name: identifiers
+          in: query
+          description: A list of identifiers (e.g. 4932.YML115C )
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: 'Maximum number of results to return, e.g 10'
+          schema:
+            type: integer
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            application/json:
+              schema:
+                type: string
+  '/{responseFormat}/network':
+    get:
+      operationId: network
+      description: |
+        The network image for the query item
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            default: image
+        - name: identifier
+          in: query
+          description: The entity identifier (e.g. 4932.YML115C )
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: 'Maximum number of results to return, e.g 10'
+          schema:
+            type: integer
+        - name: required_score
+          in: query
+          description: >-
+            Threshold of significance to include a interaction, a number between
+            0 and 1000
+          schema:
+            type: integer
+        - name: additional_network_nodes
+          in: query
+          description: 'Number of additional nodes in network (ordered by score), e.g. 10'
+          schema:
+            type: integer
+        - name: network_flavor
+          in: query
+          description: >-
+            The style of edges in the network. evidence for colored multilines.
+            Confidence for singled lines where hue correspond to confidence
+            score.
+          schema:
+            type: string
+            enum:
+              - evidence
+              - confidence
+              - actions
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            image/png:
+              schema:
+                type: string
+  '/{responseFormat}/networkList':
+    get:
+      operationId: networkList
+      description: |
+        The network image for the query item
+      tags:
+        - core
+      parameters:
+        - name: responseFormat
+          in: path
+          description: Desired format
+          required: true
+          schema:
+            type: string
+            default: image
+        - name: identifiers
+          in: query
+          description: A list of identifiers (e.g. 4932.YML115C%0D4932.YJR075W )
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: 'Maximum number of results to return, e.g 10'
+          schema:
+            type: integer
+        - name: required_score
+          in: query
+          description: >-
+            Threshold of significance to include a interaction, a number between
+            0 and 1000
+          schema:
+            type: integer
+        - name: additional_network_nodes
+          in: query
+          description: 'Number of additional nodes in network (ordered by score), e.g. 10'
+          schema:
+            type: integer
+        - name: network_flavor
+          in: query
+          description: >-
+            The style of edges in the network. evidence for colored multilines.
+            Confidence for singled lines where hue correspond to confidence
+            score.
+          schema:
+            type: string
+            enum:
+              - evidence
+              - confidence
+              - actions
+        - name: caller_identity
+          in: query
+          description: Your identifier for us.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Successful response 
+          content:
+            image/png:
+              schema:
+                type: string
+components:
+  schemas:
+    ResolveObj:
+      type: object
+      properties:
+        stringId:
+          type: string
+          description: |
+            The string ID
+          x-valueType: 'http://identifiers.org/string'
+        preferredNname:
+          type: string
+          description: |
+            The preferred name 
+        ncbitTaxonId:
+          type: string
+          description: |
+            The taxonomic identifier of the entity
+          x-valueType: 'http://identifiers.org/taxonomy'
+        queryIndex:
+          type: string
+          description: |
+            unknown
+        annotation:
+          type: string
+          description: |
+            description
